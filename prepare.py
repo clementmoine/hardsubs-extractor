@@ -41,7 +41,25 @@ class VideoEditor:
             # (Hauteur initiale en 16:9)
             self.top_panel = tk.Frame(self.pw)
 
-            self.top_panel.config(height=self.app_height // 2, bg="black")
+            # Hauteur de la partie vidéo (50% de la hauteur de l'application)
+            video_height = self.app_height // 2
+
+            self.top_panel.grid_rowconfigure(0, weight=1)
+            self.top_panel.grid_columnconfigure(0, weight=1)
+
+            # Créez une image noire de la taille de la vidéo initiale
+            black_image = PIL.Image.new('RGB', (self.app_width, video_height), (0, 0, 0))
+            black_photo = PIL.ImageTk.PhotoImage(image=black_image)
+
+            # Créez un Label pour l'image de la vidéo et affichez l'image noire
+            self.video_label = tk.Label(self.top_panel, image=black_photo, background="black")
+            self.video_label.image = black_photo  # Conservez une référence à l'image pour éviter qu'elle ne soit supprimée
+
+            self.video_label.grid(row=0, column=0, sticky="nsew")
+
+            # Ajoutez la barre de progression ici
+            self.timeline = tk.Scale(self.top_panel, orient='horizontal', length=self.app_width)
+            self.timeline.grid(row=1, column=0, sticky="ew")
 
             # Ajoutez le panneau supérieur au panneau principal
             self.pw.add(self.top_panel)
@@ -104,9 +122,6 @@ class VideoEditor:
             self.cap = cv2.VideoCapture(file_path)
             _, self.frame = self.cap.read()
             self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-
-            self.video_label = tk.Label(self.top_panel)
-            self.video_label.pack()
 
             self.toggle_play_pause()
 
