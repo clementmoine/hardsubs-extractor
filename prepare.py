@@ -24,6 +24,7 @@ class VideoEditor:
             (app.winfo_screenheight() - self.app_height) / 2
         ))
         
+        self.syncing_timeline = False
         self.is_playing = False
         self.update_id = None
         self.frame = None
@@ -58,7 +59,7 @@ class VideoEditor:
             self.video_label.grid(row=0, column=0, sticky="nsew")
 
             # Ajoutez la barre de progression ici
-            self.timeline = tk.Scale(self.top_panel, orient='horizontal', length=self.app_width)
+            self.timeline = tk.Scale(self.top_panel, orient='horizontal', from_=0, to=0, length=self.app_width, command=lambda _: self.timeline_changed() if self.frame is not None else None)
             self.timeline.grid(row=1, column=0, sticky="ew")
 
             # Ajoutez le panneau supérieur au panneau principal
@@ -122,6 +123,7 @@ class VideoEditor:
             self.cap = cv2.VideoCapture(file_path)
             _, self.frame = self.cap.read()
             self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+            self.frameCount = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
             self.toggle_play_pause()
 
@@ -131,6 +133,10 @@ class VideoEditor:
             self.left_slider.config(state="normal")
             self.right_slider.config(state="normal")
             self.play_pause_button.config(state="normal")
+
+            # Configure the timeline
+            self.timeline.set(0)
+            self.timeline.config(to=self.frameCount)
 
             self.update_video()
 
@@ -163,7 +169,27 @@ class VideoEditor:
     def get_frame(self):
         _, frame = self.cap.read()
 
+        # Sync the timeline
+        self.syncing_timeline = True
+        self.timeline.set(int(self.cap.get(cv2.CAP_PROP_POS_FRAMES)))
+
         return frame
+    
+    # Définissez une fonction pour gérer le changement de la timeline
+    def timeline_changed(self):
+        frame_number = self.timeline.get()
+        
+        # If the changed not occured from a timeline sync
+        if (not self.syncing_timeline):
+            # Définissez la position de lecture de la vidéo
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+            self.original_frame = self.get_frame()
+
+        # Mettez à jour l'affichage vidéo
+        self.update_video()
+
+        # Clear the sync since it is already done        
+        self.syncing_timeline = False
 
     def update_video(self):
         if self.update_id:  # Si une tâche planifiée existe, annulez-la
